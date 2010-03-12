@@ -7,9 +7,9 @@ module ActiveRecord::SqlExporter
     CREATION_NODE = 1
     EXISTENCE_CHECK_NODE = 2
     # ------------------------------------------------------------------- to_sql
-    def to_sql( args = {}, check_list = [] )
+    def to_sql( args = {}, classes_to_ignore = [] )
       tree = {}
-      build_export_tree( tree )
+      build_export_tree( tree, classes_to_ignore )
       sql = ''
       unless args[:no_transaction]
         sql += "BEGIN;"
@@ -39,9 +39,12 @@ module ActiveRecord::SqlExporter
       sql += ";\n"
     end
     # -------------------------------------------------------- build_export_tree
-    def build_export_tree( tree = {} )
-      self.add_to_tree( tree, CREATION_NODE )
-      expand_tree_with_relations( tree, self.class.reflections )
+    def build_export_tree( tree = {}, classes_to_ignore = [] )
+      return if classes_to_ignore.include?( self.class )
+      if tree[self.class.name].nil? || ( tree[self.class.name] && ( tree[self.class.name][id].nil? || tree[self.class.name][id][:type] == EXISTENCE_CHECK_NODE ) )
+        self.add_to_tree( tree, CREATION_NODE )
+        expand_tree_with_relations( tree, self.class.reflections, classes_to_ignore )
+      end
       return tree
     end
     # ------------------------------------------------------------- add_to_tree 
@@ -58,15 +61,15 @@ module ActiveRecord::SqlExporter
       "IF( NOT EXISTS( SELECT * FROM #{self.class.quoted_table_name} WHERE #{connection.quote_column_name(self.class.primary_key)} = #{quote_value(id)} ) THEN ROLLBACK; END IF;\n"
     end
     # ---------------------------------------- convert_has_many_relations_to_sql
-    def expand_tree_with_relations( tree, reflections )
+    def expand_tree_with_relations( tree, reflections, classes_to_ignore )
       reflections.each_pair do |key, value|
         case value.macro
         when :has_one
           singleton_method( key ) do |e|
-            e.build_export_tree( tree )
+            e.build_export_tree( tree, classes_to_ignore )
           end
         when :has_many, :has_and_belongs_to_many
-          send( key ).each{ |x| x.build_export_tree( tree ) }
+          send( key ).each{ |x| x.build_export_tree( tree, classes_to_ignore ) }
         when :belongs_to
           singleton_method( key ) do |e|
             e.add_to_tree( tree, EXISTENCE_CHECK_NODE )
