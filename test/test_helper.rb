@@ -1,0 +1,7 @@
+require 'rubygems'
+require 'active_support'
+require 'active_record'
+require 'active_support/test_case'
+require 'schema.rb'
+require 'test/unit'
+require File.dirname( __FILE__ ) + '/../init.rb'

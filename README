@@ -1,0 +1,19 @@
+ActiveRecordSqlExporter
+=======================
+
+This plugin takes a record in your database and converts it into SQL statements
+that can be used to insert it.
+
+This was written after I had to restore some specific data for a user (a number
+of rows, across a number of tables.)  
+
+It might be useful as a simple backup utility - for example, store the restoration
+sql after something gets removed.
+
+
+Example
+=======
+
+Obj.find( obj_id ).to_sql
+
+Copyright (c) 2010 Adam Palmblad (adam.palmblad@teampages.com), released under the MIT license
