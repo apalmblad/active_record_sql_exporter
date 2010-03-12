@@ -13,7 +13,7 @@ ActiveRecord::Schema.define do
   create_table :departments, :force => true do |t|
     t.string :name
   end
-  create_table :budgets do |t|
+  create_table :budgets, :force => true do |t|
     t.integer :amount
     t.integer :department_id
   end
