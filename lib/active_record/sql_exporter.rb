@@ -3,6 +3,20 @@ module ActiveRecord::SqlExporter
   def included?( klass )
     klass.include( InstanceMethods )
   end
+  ##############################################################################
+  # FileWriter
+  ##############################################################################
+  class FileWriter
+    # --------------------------------------------------------------- initialize
+    def initialize( file )
+      @file = file
+    end
+    # ------------------------------------------------------------------------ +
+    def +( s )
+      @file.write( s )
+      return self
+    end
+  end
   module InstanceMethods
     CREATION_NODE = 1
     EXISTENCE_CHECK_NODE = 2
@@ -10,17 +24,18 @@ module ActiveRecord::SqlExporter
     def to_sql( args = {}, classes_to_ignore = [] )
       tree = {}
       build_export_tree( tree, classes_to_ignore )
-      sql = ''
+      sql = args[:file] ? ActiveRecord::SqlExporter::FileWriter.new( args[:file] ) : ''
       unless args[:no_transaction]
         sql += "BEGIN;"
       end
       tree.keys.each do |klass|
         tree[klass].keys.each do |id|
           node = tree[klass][id]
+          object = klass.constantize.find( id )
           if node[:type] == EXISTENCE_CHECK_NODE
-            sql += node[:object].build_check_sql
+            sql += object.build_check_sql
           elsif node[:type] == CREATION_NODE
-            sql += node[:object].sql_restore_string
+            sql += object.sql_restore_string
           end
         end
       end
@@ -52,7 +67,7 @@ module ActiveRecord::SqlExporter
       tree[self.class.name] ||= {}
       node = tree[self.class.name][self.id] 
       if node.nil? || node[:type] == EXISTENCE_CHECK_NODE
-        tree[self.class.name][self.id] = { :type => type, :object => self }
+        tree[self.class.name][self.id] = { :type => type }
       end
       return tree
     end
