@@ -31,10 +31,10 @@ module ActiveRecord::SqlExporter
       tree.keys.each do |klass|
         tree[klass].keys.each do |id|
           node = tree[klass][id]
-          object = klass.constantize.find( id )
           if node[:type] == EXISTENCE_CHECK_NODE
-            sql += object.build_check_sql
+            sql += klass.contstantize.build_check_sql( id )
           elsif node[:type] == CREATION_NODE
+            object = klass.constantize.find( id )
             sql += object.sql_restore_string
           end
         end
@@ -74,6 +74,10 @@ module ActiveRecord::SqlExporter
     # ---------------------------------------------------------- build_check_sql
     def build_check_sql
       "IF( NOT EXISTS( SELECT * FROM #{self.class.quoted_table_name} WHERE #{connection.quote_column_name(self.class.primary_key)} = #{quote_value(id)} ) THEN ROLLBACK; END IF;\n"
+    end
+    # ---------------------------------------------------------- build_check_sql
+    def self.build_check_sql( id )
+      "IF( NOT EXISTS( SELECT * FROM #{quoted_table_name} WHERE #{connection.quote_column_name(primary_key)} = #{quote_value(id)} ) THEN ROLLBACK; END IF;\n"
     end
     # ---------------------------------------- convert_has_many_relations_to_sql
     def expand_tree_with_relations( tree, reflections, classes_to_ignore )
