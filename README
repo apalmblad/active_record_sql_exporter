@@ -10,10 +10,24 @@ of rows, across a number of tables.)
 It might be useful as a simple backup utility - for example, store the restoration
 sql after something gets removed.
 
+This moves down through relations along has_many, has_one relations, but will
+not move up along belongs_to relations.
+
+However, this doesn't make you any less likely to screw up and shoot yourself 
+in the proverbial memory usage foot with a massive swath of data, so often
+you'll want to use the second argument to to_sql, which is an array of classes
+to ignore.
+
 
 Example
 =======
 
 Obj.find( obj_id ).to_sql
+
+For a blog_post, that belongs to a user, that might have many posts:
+Post.find( id ).to_sql( {}, [User] )
+
+Export an object to a file:
+Post.find( id ).to_sql( {:file => a_file_object} )
 
 Copyright (c) 2010 Adam Palmblad (adam.palmblad@teampages.com), released under the MIT license
