@@ -32,7 +32,7 @@ module ActiveRecord::SqlExporter
         tree[klass].keys.each do |id|
           node = tree[klass][id]
           if node[:type] == EXISTENCE_CHECK_NODE
-            sql += klass.contstantize.build_check_sql( id )
+            sql += klass.constantize.build_check_sql( id )
           elsif node[:type] == CREATION_NODE
             object = klass.constantize.find( id )
             sql += object.sql_restore_string
