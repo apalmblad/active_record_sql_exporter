@@ -87,6 +87,7 @@ module ActiveRecord::SqlExporter
     # ---------------------------------------- convert_has_many_relations_to_sql
     def expand_tree_with_relations( tree, reflections, classes_to_ignore )
       reflections.each_pair do |key, value|
+        next if classes_to_ignore.include?( value.klass )
         case value.macro
         when :has_one
           singleton_method( key ) do |e|
