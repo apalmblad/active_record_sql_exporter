@@ -25,6 +25,12 @@ ActiveRecord::Schema.define do
   create_table :simples, :force => true do |t|
     t.string :name
   end
+
+  create_table :projects, :force => true do |t|
+    t.string :name
+    t.string :owner_type
+    t.integer :owner_id
+  end
 end
 
 class Employee < ActiveRecord::Base
@@ -42,4 +48,7 @@ class Budget < ActiveRecord::Base
 end
 
 class Simple < ActiveRecord::Base
+end
+class Project < ActiveRecord::Base
+  belongs_to :owner, :polymorphic => true
 end
