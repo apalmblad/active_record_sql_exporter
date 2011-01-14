@@ -31,3 +31,11 @@ Export an object to a file:
 Post.find( id ).to_sql( {:file => a_file_object} )
 
 Copyright (c) 2010 Adam Palmblad (adam.palmblad@teampages.com), released under the MIT license
+
+
+To Do
+=====
+
+* The generation the SQL that checks for the presence of a value is broken!
+* Add ability to toggle sql options, such as the ON DUPLICATE KEY stuff
+* Support for non MySQL databases
