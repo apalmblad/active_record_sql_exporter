@@ -5,7 +5,7 @@ This plugin takes a record in your database and converts it into SQL statements
 that can be used to insert it.
 
 This was written after I had to restore some specific data for a user (a number
-of rows, across a number of tables.)  
+of rows, across a number of tables.)
 
 It might be useful as a simple backup utility - for example, store the restoration
 sql after something gets removed.
@@ -17,6 +17,7 @@ However, this doesn't make you any less likely to screw up and shoot yourself
 in the proverbial memory usage foot with a massive swath of data, so often
 you'll want to use the second argument to to_sql, which is an array of classes
 to ignore.
+
 
 
 Example
@@ -35,7 +36,7 @@ Copyright (c) 2010 Adam Palmblad (adam.palmblad@teampages.com), released under t
 
 To Do
 =====
-
+* Watch dependent => nullify and write restoration query
 * The generation the SQL that checks for the presence of a value is broken!
 * Add ability to toggle sql options, such as the ON DUPLICATE KEY stuff
 * Support for non MySQL databases

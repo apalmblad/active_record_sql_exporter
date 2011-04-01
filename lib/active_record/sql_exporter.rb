@@ -87,6 +87,8 @@ module ActiveRecord::SqlExporter
     # ---------------------------------------- convert_has_many_relations_to_sql
     def expand_tree_with_relations( tree, reflections, classes_to_ignore )
       reflections.each_pair do |key, value|
+        next unless value.options[:dependent] && value.options[:dependent] == :destroy
+
         if value.options[:polymorphic]
           next if classes_to_ignore.include?( send( key ).class )
         else
