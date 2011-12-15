@@ -19,8 +19,10 @@ class ActiveRecordSqlExporterTest < ActiveSupport::TestCase
   end
   test "Exporting model with dependent nullify" do
     proj = Project.create!(:name => "Public Works" )
-    task = Task.create!( :name => "Test Task", :project => proj )
+    t1 = Task.create!( :name => "Test Task 1", :project => proj )
+    t2 = Task.create!( :name => "Test Task 2", :project => proj )
     assert( proj.tasks.any? )
-    assert( proj.to_sql =~ /UPDATE `tasks` SET `project_id` = #{proj.id}/, proj.to_sql )
+    assert( proj.to_sql =~ /UPDATE `tasks` SET `project_id` = #{proj.id} WHERE `id` = #{t1.id}/, proj.to_sql )
+    assert( proj.to_sql =~ /UPDATE `tasks` SET `project_id` = #{proj.id} WHERE `id` = #{t2.id}/, proj.to_sql )
   end
 end
