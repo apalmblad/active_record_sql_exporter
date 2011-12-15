@@ -12,9 +12,15 @@ class ActiveRecordSqlExporterTest < ActiveSupport::TestCase
     d.employees.create!( :name => "Good Employee" )
     raise d.to_sql
   end
-  test "Exporiting model with polymorphic belongs to" do
+  test "Exporting model with polymorphic belongs to" do
     p = Project.create!( :name => "Document Conversion",
         :owner => Department.create!(:name => "Public Works" ) )
     puts p.to_sql
+  end
+  test "Exporting model with dependent nullify" do
+    proj = Project.create!(:name => "Public Works" )
+    task = Task.create!( :name => "Test Task", :project => proj )
+    assert( proj.tasks.any? )
+    assert( proj.to_sql =~ /UPDATE `tasks` SET `project_id` = #{proj.id}/, proj.to_sql )
   end
 end

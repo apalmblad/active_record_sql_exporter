@@ -10,6 +10,10 @@ ActiveRecord::Base.configurations = {
 ActiveRecord::Base.establish_connection 'active_record_schema_exporter'
 
 ActiveRecord::Schema.define do
+  create_table :tasks, :force => true do |t|
+    t.string :name
+    t.integer :project_id
+  end
   create_table :departments, :force => true do |t|
     t.string :name
   end
@@ -51,4 +55,8 @@ class Simple < ActiveRecord::Base
 end
 class Project < ActiveRecord::Base
   belongs_to :owner, :polymorphic => true
+  has_many :tasks, :dependent => :nullify
+end
+class Task < ActiveRecord::Base
+  belongs_to :project
 end

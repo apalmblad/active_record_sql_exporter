@@ -29,6 +29,7 @@ module ActiveRecord::SqlExporter
   module InstanceMethods
     CREATION_NODE = 1
     EXISTENCE_CHECK_NODE = 2
+    UPDATE_NODE = 3
     # ------------------------------------------------------------------- to_sql
     def to_sql( args = {}, classes_to_ignore = [] )
       tree = {}
@@ -45,11 +46,17 @@ module ActiveRecord::SqlExporter
           elsif node[:type] == CREATION_NODE
             object = klass.constantize.find( id )
             sql += object.sql_restore_string
+          elsif node[:type] == UPDATE_NODE
+            object = klass.constantize.find( id )
+            sql += object.update_sql_string( node[:key] )
           end
         end
       end
       sql += "COMMIT;" unless args[:no_transaction]
       return sql
+    end
+    def update_sql_string( key_name )
+      "UPDATE #{self.class.quoted_table_name} SET #{quoted_comma_pair_list( connection, { key_name => read_attribute( key_name ) } )} WHERE #{connection.quote_column_name(self.class.primary_key)} = #{quote_value(id)};\n"
     end
     # ------------------------------------------------------- sql_restore_string
     def sql_restore_string( args = {} )
@@ -72,11 +79,12 @@ module ActiveRecord::SqlExporter
       return tree
     end
     # ------------------------------------------------------------- add_to_tree 
-    def add_to_tree( tree, type )
+    def add_to_tree( tree, type, options = {} )
       tree[self.class.name] ||= {}
       node = tree[self.class.name][self.id] 
       if node.nil? || node[:type] == EXISTENCE_CHECK_NODE
-        tree[self.class.name][self.id] = { :type => type }
+        options[:type] = type
+        tree[self.class.name][self.id] = options
       end
       return tree
     end
@@ -87,8 +95,7 @@ module ActiveRecord::SqlExporter
     # ---------------------------------------- convert_has_many_relations_to_sql
     def expand_tree_with_relations( tree, reflections, classes_to_ignore )
       reflections.each_pair do |key, value|
-        next unless value.options[:dependent] && value.options[:dependent] == :destroy
-
+        next if value.options[:dependent] && ![:destroy, :nullify].include?( value.options[:dependent] )
         if value.options[:polymorphic]
           next if classes_to_ignore.include?( send( key ).class )
         else
@@ -100,7 +107,14 @@ module ActiveRecord::SqlExporter
             e.build_export_tree( tree, classes_to_ignore )
           end
         when :has_many, :has_and_belongs_to_many
-          send( key ).each{ |x| x.build_export_tree( tree, classes_to_ignore ) }
+          records = send( key )
+          if value.options[:dependent] == :nullify
+            records.each do |record|
+              record.add_to_tree( tree, UPDATE_NODE, :key => value.primary_key_name )
+            end
+          else
+            records.each{ |x| x.build_export_tree( tree, classes_to_ignore ) }
+          end
         when :belongs_to
           singleton_method( key ) do |e|
             e.add_to_tree( tree, EXISTENCE_CHECK_NODE )
