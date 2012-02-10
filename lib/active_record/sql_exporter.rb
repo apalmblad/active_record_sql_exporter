@@ -99,7 +99,11 @@ module ActiveRecord::SqlExporter
         if value.options[:polymorphic]
           next if classes_to_ignore.include?( send( key ).class )
         else
-          next if classes_to_ignore.include?( value.klass )
+          begin
+            next if classes_to_ignore.include?( value.klass )
+          rescue
+            raise "Problem in a #{self.class.name} with #{key} = #{value}"
+          end
         end
         case value.macro
         when :has_one
