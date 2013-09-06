@@ -135,13 +135,17 @@ module ActiveRecord::SqlExporter
             raise NestedException.new( ex, "Unexpected error on relation on #{self.class.name}.#{key}" )
           end
         when :has_many, :has_and_belongs_to_many
-          records = send( key )
-          if value.options[:dependent] == :nullify
-            records.each do |record|
-              record.add_to_tree( tree, UPDATE_NODE, :key => value.primary_key_name )
+          begin
+            records = send( key )
+            if value.options[:dependent] == :nullify
+              records.each do |record|
+                record.add_to_tree( tree, UPDATE_NODE, :key => value.primary_key_name )
+              end
+            else
+              records.each{ |x| x.build_export_tree( tree, classes_to_ignore ) }
             end
-          else
-            records.each{ |x| x.build_export_tree( tree, classes_to_ignore ) }
+          rescue Exception => ex
+            raise NestedException.new( ex, "Unexpected error on relation on #{self.class.name}.#{key}" )
           end
         when :belongs_to
           singleton_method( key ) do |e|
@@ -156,7 +160,7 @@ module ActiveRecord::SqlExporter
     # ----------------------------------------------------------- print_relation
     def _print_relation( tree, classes_to_ingore, indent_depth = 0 )
       if tree[self.class.name].nil? || ( tree[self.class.name] && ( tree[self.class.name][id].nil? || tree[self.class.name][id][:type] == EXISTENCE_CHECK_NODE ) )
-        puts "%s%s - %d" % [indent_depth * "\t", self.class.name, self.id]
+        puts "%s%s - %d" % ["\t" * indent_depth, self.class.name, self.id]
         self.add_to_tree( tree, CREATION_NODE )
         _print_reflection_relations( tree, self.class.reflections, classes_to_ignore, indent_level + 1 )
       end
@@ -184,7 +188,7 @@ module ActiveRecord::SqlExporter
           if value.options[:dependent] == :nullify
             records.each do |record|
               record.add_to_tree( tree, UPDATE_NODE, :key => value.primary_key_name )
-              puts "%s%s [UPDATE] - %d" % [indent_depth * "\t", record.class.name, record.id]
+              puts "%s%s [UPDATE] - %d" % ["\t" * indent_depth, record.class.name, record.id]
             end
           else
             records.each do |x|
