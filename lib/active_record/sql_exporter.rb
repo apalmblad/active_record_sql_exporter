@@ -61,14 +61,18 @@ module ActiveRecord::SqlExporter
       tree.keys.each do |klass|
         tree[klass].keys.each do |id|
           node = tree[klass][id]
-          if node[:type] == EXISTENCE_CHECK_NODE
-            sql += klass.constantize.build_check_sql( id )
-          elsif node[:type] == CREATION_NODE
-            object = klass.constantize.find( id )
-            sql += object.sql_restore_string
-          elsif node[:type] == UPDATE_NODE
-            object = klass.constantize.find( id )
-            sql += object.update_sql_string( node[:key] )
+          begin
+            if node[:type] == EXISTENCE_CHECK_NODE
+              sql += klass.constantize.build_check_sql( id )
+            elsif node[:type] == CREATION_NODE
+              object = klass.constantize.find( id )
+              sql += object.sql_restore_string
+            elsif node[:type] == UPDATE_NODE
+              object = klass.constantize.find( id )
+              sql += object.update_sql_string( node[:key] )
+            end
+          rescue Encoding::UndefinedConversionError
+            raise "Error with encoding of #{object.inspect}"
           end
         end
       end
@@ -92,6 +96,8 @@ module ActiveRecord::SqlExporter
         sql += " ON DUPLICATE KEY UPDATE #{quoted_comma_pair_list(connection, quoted_attributes)}"
       end
       sql += ";\n"
+      sql.force_encoding( "utf-8" )
+      return sql
     end
     # -------------------------------------------------------- build_export_tree
     def build_export_tree( tree = {}, classes_to_ignore = [] )
