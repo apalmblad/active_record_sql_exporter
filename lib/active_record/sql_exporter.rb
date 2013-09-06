@@ -158,7 +158,7 @@ module ActiveRecord::SqlExporter
       return tree
     end
     # ----------------------------------------------------------- print_relation
-    def _print_relation( tree, classes_to_ingore, indent_depth = 0 )
+    def _print_relation( tree, classes_to_ignore, indent_depth = 0 )
       if tree[self.class.name].nil? || ( tree[self.class.name] && ( tree[self.class.name][id].nil? || tree[self.class.name][id][:type] == EXISTENCE_CHECK_NODE ) )
         puts "%s%s - %d" % ["\t" * indent_depth, self.class.name, self.id]
         self.add_to_tree( tree, CREATION_NODE )

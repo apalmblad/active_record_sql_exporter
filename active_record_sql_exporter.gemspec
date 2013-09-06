@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name        = "active_record_sql_exporter"
-  s.version     =  "0.1.3"
+  s.version     =  "0.1.4"
   s.platform    = Gem::Platform::RUBY
   s.authors     = ["Adam Palmblad"]
   s.email       = ["Adam Palmblad"]
