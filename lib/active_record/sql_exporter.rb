@@ -1,13 +1,15 @@
 module ActiveRecord::SqlExporter
   class NestedException < ArgumentError
-    def initialize( old_exception, msg )
+    attr_accessor :old_exception, :klass
+    def initialize( old_exception, klass, key )
       @old_exception = old_exception
-      @message = msg
+      @klass = klass
+      @key = key
     end
 
     # --------------------------------------------------------------------- to_s
     def to_s
-      "#{@message} / #{@old_exception.to_s}"
+      "Unexpected error on #{@klass}.#{@key} / #{@old_exception.to_s}"
     end
   end
   # ------------------------------------------------------------------ included?
@@ -132,8 +134,10 @@ module ActiveRecord::SqlExporter
             singleton_method( key ) do |e|
               e.build_export_tree( tree, classes_to_ignore )
             end
+          rescue NestedException => ex
+            raise NestedException.new( ex.old_exception, "#{self.class.name}.#{ex.klass}", key )
           rescue Exception => ex
-            raise NestedException.new( ex, "Unexpected error on relation on #{self.class.name}.#{key}" )
+            raise NestedException.new( ex, self.class.name, key )
           end
         when :has_many, :has_and_belongs_to_many
           begin
@@ -145,8 +149,10 @@ module ActiveRecord::SqlExporter
             else
               records.each{ |x| x.build_export_tree( tree, classes_to_ignore ) }
             end
+          rescue NestedException => ex
+            raise NestedException.new( ex.old_exception, "#{self.class.name}.#{ex.klass}", key )
           rescue Exception => ex
-            raise NestedException.new( ex, "Unexpected error on relation on #{self.class.name}.#{key}" )
+            raise NestedException.new( ex, self.class.name, key )
           end
         when :belongs_to
           singleton_method( key ) do |e|
@@ -163,7 +169,7 @@ module ActiveRecord::SqlExporter
       if tree[self.class.name].nil? || ( tree[self.class.name] && ( tree[self.class.name][id].nil? || tree[self.class.name][id][:type] == EXISTENCE_CHECK_NODE ) )
         puts "%s%s - %d" % ["\t" * indent_depth, self.class.name, self.id]
         self.add_to_tree( tree, CREATION_NODE )
-        _print_reflection_relations( tree, self.class.reflections, classes_to_ignore, indent_level + 1 )
+        _print_reflection_relations( tree, self.class.reflections, classes_to_ignore, indent_depth + 1 )
       end
     end
     # ---------------------------------------- convert_has_many_relations_to_sql
@@ -189,7 +195,7 @@ module ActiveRecord::SqlExporter
           if value.options[:dependent] == :nullify
             records.each do |record|
               record.add_to_tree( tree, UPDATE_NODE, :key => value.primary_key_name )
-              puts "%s%s [UPDATE] - %d" % ["\t" * indent_depth, record.class.name, record.id]
+              puts "%s%s [UPDATE] - %d" % ["\t" * indent_level, record.class.name, record.id]
             end
           else
             records.each do |x|
