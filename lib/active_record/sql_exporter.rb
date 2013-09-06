@@ -1,3 +1,4 @@
+# encoding: UTF-8
 module ActiveRecord::SqlExporter
   class NestedException < ArgumentError
     attr_accessor :old_exception, :klass
