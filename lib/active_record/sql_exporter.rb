@@ -1,4 +1,14 @@
 module ActiveRecord::SqlExporter
+  class NestedException < ArgumentError
+    def initialize( old_exception, msg )
+      @old_exception = old_exception
+      @message = msg
+    end
+
+    def to_s
+      @message
+    end
+  end
   # ------------------------------------------------------------------ included?
   def included?( klass )
     klass.include( InstanceMethods )
@@ -30,6 +40,12 @@ module ActiveRecord::SqlExporter
     CREATION_NODE = 1
     EXISTENCE_CHECK_NODE = 2
     UPDATE_NODE = 3
+    # --------------------- pretend_to_sql( args = {}, classes_to_ignore = [] ) 
+    def print_relation_tree( args = {}, classes_to_ignore = [] ) 
+      tree = {}
+      _print_relation( tree, classes_to_ignore )
+      return if classes_to_ignore.include?( self.class )
+    end
     # ------------------------------------------------------------------- to_sql
     def to_sql( args = {}, classes_to_ignore = [] )
       tree = {}
@@ -55,6 +71,10 @@ module ActiveRecord::SqlExporter
       sql += "COMMIT;" unless args[:no_transaction]
       return sql
     end
+################################################################################
+    protected
+################################################################################
+    # -------------------------------------------------------- update_sql_string
     def update_sql_string( key_name )
       "UPDATE #{self.class.quoted_table_name} SET #{quoted_comma_pair_list( connection, { key_name => read_attribute( key_name ) } )} WHERE #{connection.quote_column_name(self.class.primary_key)} = #{quote_value(id)};\n"
     end
@@ -107,8 +127,12 @@ module ActiveRecord::SqlExporter
         end
         case value.macro
         when :has_one
-          singleton_method( key ) do |e|
-            e.build_export_tree( tree, classes_to_ignore )
+          begin
+            singleton_method( key ) do |e|
+              e.build_export_tree( tree, classes_to_ignore )
+            end
+          rescue Exception => ex
+            raise NestedException.new( ex, "Unexpected error on relation on #{self.class.name}.#{key}" )
           end
         when :has_many, :has_and_belongs_to_many
           records = send( key )
@@ -128,6 +152,50 @@ module ActiveRecord::SqlExporter
         end
       end
       return tree
+    end
+    # ----------------------------------------------------------- print_relation
+    def _print_relation( tree, classes_to_ingore, indent_depth = 0 )
+      if tree[self.class.name].nil? || ( tree[self.class.name] && ( tree[self.class.name][id].nil? || tree[self.class.name][id][:type] == EXISTENCE_CHECK_NODE ) )
+        puts "%s%s - %d" % [indent_depth * "\t", self.class.name, self.id]
+        self.add_to_tree( tree, CREATION_NODE )
+        _print_reflection_relations( tree, self.class.reflections, classes_to_ignore, indent_level + 1 )
+      end
+    end
+    # ---------------------------------------- convert_has_many_relations_to_sql
+    def _print_reflection_relations( tree, reflections, classes_to_ignore, indent_level = 1 )
+      reflections.each_pair do |key, value|
+        next if value.options[:dependent] && ![:destroy, :nullify].include?( value.options[:dependent] )
+        if value.options[:polymorphic]
+          next if classes_to_ignore.include?( send( key ).class )
+        else
+          begin
+            next if classes_to_ignore.include?( value.klass )
+          rescue
+            raise "Problem in a #{self.class.name} with #{key} = #{value}"
+          end
+        end
+        case value.macro
+        when :has_one
+          singleton_method( key ) do |e|
+            e._print_relation( tree, classes_to_ignore, indent_level )
+          end
+        when :has_many, :has_and_belongs_to_many
+          records = send( key )
+          if value.options[:dependent] == :nullify
+            records.each do |record|
+              record.add_to_tree( tree, UPDATE_NODE, :key => value.primary_key_name )
+              puts "%s%s [UPDATE] - %d" % [indent_depth * "\t", record.class.name, record.id]
+            end
+          else
+            records.each do |x|
+              x._print_relation( tree, classes_to_ignore, indent_level )
+            end
+          end
+        when :belongs_to
+        else
+          raise "Unhandled reflection: #{value.macro}"
+        end
+      end
     end
     # --------------------------------------------------------- singleton_method
     def singleton_method( key )
