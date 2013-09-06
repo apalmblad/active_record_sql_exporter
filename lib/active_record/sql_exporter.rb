@@ -5,8 +5,9 @@ module ActiveRecord::SqlExporter
       @message = msg
     end
 
+    # --------------------------------------------------------------------- to_s
     def to_s
-      @message
+      "#{@message} / #{@old_exception.to_s}"
     end
   end
   # ------------------------------------------------------------------ included?
