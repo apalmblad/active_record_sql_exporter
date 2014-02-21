@@ -1,5 +1,6 @@
 Gem::Specification.new do |s|
   s.name        = "active_record_sql_exporter"
+  s.licenses = ['MIT']
   s.version     =  "0.2.0"
   s.platform    = Gem::Platform::RUBY
   s.authors     = ["Adam Palmblad"]
