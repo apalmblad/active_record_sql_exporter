@@ -51,7 +51,7 @@ module ActiveRecord::SqlExporter
       return if classes_to_ignore.include?( self.class )
     end
     # ------------------------------------------------------------------- to_sql
-    def to_sql( args = {}, classes_to_ignore = [] )
+    def to_backup_sql( args = {}, classes_to_ignore = [] )
       tree = {}
       build_export_tree( tree, classes_to_ignore )
       sql = args[:file] ? ActiveRecord::SqlExporter::FileWriter.new( args[:file] ) : ''
@@ -84,19 +84,31 @@ module ActiveRecord::SqlExporter
 ################################################################################
     # -------------------------------------------------------- update_sql_string
     def update_sql_string( key_name )
-      "UPDATE #{self.class.quoted_table_name} SET #{quoted_comma_pair_list( connection, { key_name => read_attribute( key_name ) } )} WHERE #{connection.quote_column_name(self.class.primary_key)} = #{quote_value(id)};\n"
+      data = []
+      self.class.columns.map do |x|
+        next if x.primary
+        data << "#{connection.quote_column_name( x.name )}=#{connection.quote( read_attribute(x.name))}"
+      end
+      "UPDATE #{self.class.quoted_table_name} SET #{data.join(',')} WHERE #{connection.quote_column_name(self.class.primary_key)} = #{quote_value(id)};\n"
     end
     # ------------------------------------------------------- sql_restore_string
     def sql_restore_string( args = {} )
-      quoted_attributes = attributes_with_quotes
-      sql = "\nINSERT INTO #{self.class.quoted_table_name} " +
-      "(#{quoted_column_names.join(', ')}) " +
-      "VALUES(#{quoted_attributes.values.join(', ')})"
+      columns = self.class.columns.map do |x|
+        connection.quote_column_name( x.name )
+      end
+      values = self.class.columns.map do |x|
+        connection.quote( read_attribute( x.name ) )
+      end
+
+      sql = "\nINSERT INTO #{self.class.quoted_table_name} (#{columns.join(',')}) VALUES (#{values.join(',')})"
       unless args[:no_update]
-        sql += " ON DUPLICATE KEY UPDATE #{quoted_comma_pair_list(connection, quoted_attributes)}"
+        pairs = []
+        columns.each_with_index do |c,i|
+          pairs << "#{c}=#{values[i]}"
+        end
+        sql += " ON DUPLICATE KEY UPDATE #{pairs.join(',')}"
       end
       sql += ";\n"
-      sql.force_encoding( "utf-8" )
       return sql
     end
     # -------------------------------------------------------- build_export_tree
@@ -151,7 +163,7 @@ module ActiveRecord::SqlExporter
             records = send( key )
             if value.options[:dependent] == :nullify
               records.each do |record|
-                record.add_to_tree( tree, UPDATE_NODE, :key => value.primary_key_name )
+                record.add_to_tree( tree, UPDATE_NODE, key: value.association_primary_key )
               end
             else
               records.each{ |x| x.build_export_tree( tree, classes_to_ignore ) }
@@ -159,6 +171,7 @@ module ActiveRecord::SqlExporter
           rescue NestedException => ex
             raise NestedException.new( ex.old_exception, "#{self.class.name}.#{ex.klass}", key )
           rescue Exception => ex
+            raise ex
             raise NestedException.new( ex, self.class.name, key )
           end
         when :belongs_to
@@ -201,7 +214,7 @@ module ActiveRecord::SqlExporter
           records = send( key )
           if value.options[:dependent] == :nullify
             records.each do |record|
-              record.add_to_tree( tree, UPDATE_NODE, :key => value.primary_key_name )
+              record.add_to_tree( tree, UPDATE_NODE, key: value.primary_key_name )
               puts "%s%s [UPDATE] - %d" % ["\t" * indent_level, record.class.name, record.id]
             end
           else
