@@ -23,13 +23,13 @@ to ignore.
 Example
 =======
 
-Obj.find( obj_id ).to_sql
+Obj.find( obj_id ).to_backup_sql
 
 For a blog_post, that belongs to a user, that might have many posts:
-Post.find( id ).to_sql( {}, [User] )
+Post.find( id ).to_backup_sql( {}, [User] )
 
 Export an object to a file:
-Post.find( id ).to_sql( {:file => a_file_object} )
+Post.find( id ).to_backup_sql( {:file => a_file_object} )
 
 Copyright (c) 2010 Adam Palmblad (adam.palmblad@teampages.com), released under the MIT license
 
