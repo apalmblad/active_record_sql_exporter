@@ -36,7 +36,7 @@ module ActiveRecord::SqlExporter
   module ClassMethods
     # ---------------------------------------------------------- build_check_sql
     def build_check_sql( id )
-      "IF( NOT EXISTS( SELECT * FROM #{quoted_table_name} WHERE #{connection.quote_column_name(primary_key)} = #{quote_value(id)} ) THEN ROLLBACK; END IF;\n"
+      "IF( NOT EXISTS( SELECT * FROM #{quoted_table_name} WHERE #{self.class.connection.quote_column_name(primary_key)} = #{quote_value(id)} ) THEN ROLLBACK; END IF;\n"
     end
   end
 
@@ -87,17 +87,17 @@ module ActiveRecord::SqlExporter
       data = []
       self.class.columns.map do |x|
         next if x.primary
-        data << "#{connection.quote_column_name( x.name )}=#{connection.quote( read_attribute(x.name))}"
+        data << "#{self.class.connection.quote_column_name( x.name )}=#{self.class.connection.quote( read_attribute(x.name))}"
       end
-      "UPDATE #{self.class.quoted_table_name} SET #{data.join(',')} WHERE #{connection.quote_column_name(self.class.primary_key)} = #{quote_value(id)};\n"
+      "UPDATE #{self.class.quoted_table_name} SET #{data.join(',')} WHERE #{self.class.connection.quote_column_name(self.class.primary_key)} = #{quote_value(id)};\n"
     end
     # ------------------------------------------------------- sql_restore_string
     def sql_restore_string( args = {} )
       columns = self.class.columns.map do |x|
-        connection.quote_column_name( x.name )
+        self.class.connection.quote_column_name( x.name )
       end
       values = self.class.columns.map do |x|
-        connection.quote( read_attribute( x.name ) )
+        self.class.connection.quote( read_attribute( x.name ) )
       end
 
       sql = "\nINSERT INTO #{self.class.quoted_table_name} (#{columns.join(',')}) VALUES (#{values.join(',')})"
@@ -132,7 +132,7 @@ module ActiveRecord::SqlExporter
     end
     # ---------------------------------------------------------- build_check_sql
     def build_check_sql
-      "IF( NOT EXISTS( SELECT * FROM #{self.class.quoted_table_name} WHERE #{connection.quote_column_name(self.class.primary_key)} = #{quote_value(id)} ) THEN ROLLBACK; END IF;\n"
+      "IF( NOT EXISTS( SELECT * FROM #{self.class.quoted_table_name} WHERE #{self.class.connection.quote_column_name(self.class.primary_key)} = #{quote_value(id)} ) THEN ROLLBACK; END IF;\n"
     end
     # ---------------------------------------- convert_has_many_relations_to_sql
     def expand_tree_with_relations( tree, reflections, classes_to_ignore )
