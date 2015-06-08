@@ -1,10 +1,10 @@
 Gem::Specification.new do |s|
   s.name        = "active_record_sql_exporter"
   s.licenses = ['MIT']
-  s.version     =  "0.2.1"
+  s.version     =  "0.2.3"
   s.platform    = Gem::Platform::RUBY
   s.authors     = ["Adam Palmblad"]
-  s.email       = ["Adam Palmblad"]
+  s.email       = ["apalmblad@gmail.com"]
   s.homepage    = "http://github.com/apalmblad/active_record_sql_exporter"
   s.summary     = "Export active record objects to raw sql."
   s.description = "Quickly export an active record object to raw sql, useful for restoring partial data from a backup"
