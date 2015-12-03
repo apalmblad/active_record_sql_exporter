@@ -63,13 +63,17 @@ module ActiveRecord::SqlExporter
           node = tree[klass][id]
           begin
             if node[:type] == EXISTENCE_CHECK_NODE
-              sql += klass.constantize.build_check_sql( id )
+              sql << klass.constantize.build_check_sql( id )
             elsif node[:type] == CREATION_NODE
-              object = klass.constantize.find( id )
-              sql += object.sql_restore_string
+              if id
+                object = klass.constantize.find( id )
+                sql << object.sql_restore_string
+              end
             elsif node[:type] == UPDATE_NODE
-              object = klass.constantize.find( id )
-              sql += object.update_sql_string( node[:key] )
+              if id
+                object = klass.constantize.find( id )
+                sql << object.update_sql_string( node[:key] )
+              end
             end
           rescue Encoding::UndefinedConversionError
             raise "Error with encoding of #{object.inspect}"
