@@ -1,7 +1,7 @@
 Gem::Specification.new do |s|
   s.name        = "active_record_sql_exporter"
   s.licenses = ['MIT']
-  s.version     =  "0.2.3"
+  s.version     =  "0.2.4"
   s.platform    = Gem::Platform::RUBY
   s.authors     = ["Adam Palmblad"]
   s.email       = ["apalmblad@gmail.com"]
