@@ -36,7 +36,7 @@ module ActiveRecord::SqlExporter
   module ClassMethods
     # ---------------------------------------------------------- build_check_sql
     def build_check_sql( id )
-      "IF( NOT EXISTS( SELECT * FROM #{quoted_table_name} WHERE #{connection.quote_column_name(primary_key)} = #{quote_value(id, primary_key)} ) THEN ROLLBACK; END IF;\n"
+      "IF( NOT EXISTS( SELECT * FROM #{quoted_table_name} WHERE #{connection.quote_column_name(primary_key)} = #{quote_value(id, columns_hash[primary_key])} ) THEN ROLLBACK; END IF;\n"
     end
   end
 
