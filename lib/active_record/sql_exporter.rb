@@ -90,11 +90,16 @@ module ActiveRecord::SqlExporter
     def update_sql_string( key_name )
       data = []
       self.class.columns.map do |x|
-        next if x.primary
+        next if is_primary_key_field?(x)
         data << "#{self.class.connection.quote_column_name( x.name )}=#{self.class.connection.quote( read_attribute(x.name))}"
       end
       "UPDATE #{self.class.quoted_table_name} SET #{data.join(',')} WHERE #{self.class.connection.quote_column_name(self.class.primary_key)} = #{quote_value(id)};\n"
     end
+
+    def is_primary_key_field?(col)
+      (col.respond_to?(:primary) && col.primary) || (col.name == self.class.primary_key)
+    end
+
     # ------------------------------------------------------- sql_restore_string
     def sql_restore_string( args = {} )
       columns = self.class.columns.map do |x|
