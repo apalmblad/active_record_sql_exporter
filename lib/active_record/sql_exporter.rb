@@ -14,9 +14,15 @@ module ActiveRecord::SqlExporter
     end
   end
   # ------------------------------------------------------------------ included?
-  def included?( klass )
-    klass.include( InstanceMethods )
-    klass.extend( ClassMethods )
+  def included?(klass)
+    klass.include(InstanceMethods)
+    klass.extend(ClassMethods)
+    return if klass.respond_to?(:quote_value)
+    class_eval <<-EOC
+      def self.quote_value(*args)
+        connection.quote_value(*args)
+      end
+    EOC
   end
   ##############################################################################
   # FileWriter
@@ -93,7 +99,8 @@ module ActiveRecord::SqlExporter
         next if is_primary_key_field?(x)
         data << "#{self.class.connection.quote_column_name( x.name )}=#{self.class.connection.quote( read_attribute(x.name))}"
       end
-      "UPDATE #{self.class.quoted_table_name} SET #{data.join(',')} WHERE #{self.class.connection.quote_column_name(self.class.primary_key)} = #{quote_value(id)};\n"
+      quoted_id = self.class.quote_value(id, self.class.columns_hash[self.class.primary_key])
+      "UPDATE #{self.class.quoted_table_name} SET #{data.join(',')} WHERE #{self.class.connection.quote_column_name(self.class.primary_key)} = #{quoted_id};\n"
     end
 
     def is_primary_key_field?(col)
